@@ -1,0 +1,3 @@
+{$API_HOST} {
+  reverse_proxy telegram-chat-api:3001
+}

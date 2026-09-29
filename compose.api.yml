@@ -1,0 +1,31 @@
+services:
+  telegram-chat-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file: .env.api
+    environment:
+      HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:3001:3001"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+  telegram-chat-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env.api
+    depends_on:
+      - telegram-chat-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.api:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

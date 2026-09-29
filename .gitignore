@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.npm-cache/
+.env
+.env.api
+.vercel/
+.known_hosts
+*.log
+*.tar.gz
