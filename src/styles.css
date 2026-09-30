@@ -115,6 +115,7 @@ button { cursor: pointer; }
   padding: clamp(38px, 8vh, 90px) 24px 48px;
   background: #fff;
 }
+.disconnected .setup-view { align-items: center; padding: 32px 24px; }
 .setup-panel { width: min(100%, 460px); }
 .setup-panel h1 { margin: 0 0 9px; font-size: 26px; line-height: 1.25; letter-spacing: -.5px; font-weight: 680; }
 .view-intro { margin: 0 0 29px; color: #536572; font-size: 14px; line-height: 1.5; }

@@ -126,9 +126,9 @@ function App() {
   const lastTime = lastMessage ? new Date(lastMessage.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : null
   const startNewChat = () => { setCreatingChat(true); setError(''); setSidebarOpen(false) }
 
-  return <div className="app-shell">
-    {sidebarOpen && <button className="sidebar-backdrop" aria-label="Закрыть список чатов" onClick={() => setSidebarOpen(false)}/>}
-    <aside className={'sidebar' + (sidebarOpen ? ' open' : '')}>
+  return <div className={'app-shell' + (!connected ? ' disconnected' : '')}>
+    {connected && sidebarOpen && <button className="sidebar-backdrop" aria-label="Закрыть список чатов" onClick={() => setSidebarOpen(false)}/>}
+    {connected && <aside className={'sidebar' + (sidebarOpen ? ' open' : '')}>
       <div className="sidebar-header">
         <strong>Чаты</strong>
         {connected && <button className="new-chat" onClick={startNewChat} aria-label="Новый чат" title="Новый чат"><Icon name="plus" size={20}/><span>Новый чат</span></button>}
@@ -141,12 +141,12 @@ function App() {
         </button> : <p className="empty-list">{connected ? 'Пока нет чатов. Нажмите «Новый чат», чтобы указать получателя.' : 'Подключите аккаунт, чтобы начать переписку.'}</p>}
       </div>
       <div className="sidebar-bottom"><span className={'status-dot' + (connected ? ' online' : '')}/><span>{connected ? 'Аккаунт подключён' : 'Аккаунт не подключён'}</span>{connected && <button onClick={disconnect}>Отключить</button>}</div>
-    </aside>
+    </aside>}
     <main className="main">
-      <header className="topbar">
+      {connected && <header className="topbar">
         <button className="mobile-menu" type="button" aria-label="Открыть список чатов" onClick={() => setSidebarOpen(true)}><Icon name="menu" size={22}/></button>
-        {connected && chatId && !creatingChat ? <div className="topbar-label"><span className="avatar small"><Icon name="user" size={19}/></span><strong>{phone}</strong></div> : <strong>{!connected ? 'Подключение аккаунта' : 'Новый чат'}</strong>}
-      </header>
+        {chatId && !creatingChat ? <div className="topbar-label"><span className="avatar small"><Icon name="user" size={19}/></span><strong>{phone}</strong></div> : <strong>Новый чат</strong>}
+      </header>}
       {!connected ? <section className="setup-view">
         <div className="setup-panel">
           <h1>Подключите аккаунт</h1>
