@@ -27,11 +27,12 @@ async function api(path, options) {
 function Icon({ name, size = 20 }) {
   const paths = {
     send: <><path d="m3 11 18-8-8 18-2.8-7.2L3 11Z"/><path d="m10.2 13.8 5.3-5.3"/></>,
-    back: <><path d="m14 5-7 7 7 7"/></>,
-    check: <><path d="m4 12 5 5L20 6"/></>,
-    lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
     chat: <><path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-4-.95L3 20l.95-4.5a8.5 8.5 0 1 1 16.05-4Z"/></>,
-    bolt: <><path d="m13 2-9 11h7l-1 9 10-12h-7V2Z"/></>,
+    user: <><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></>,
+    plus: <><path d="M12 5v14M5 12h14"/></>,
+    menu: <><path d="M4 7h16M4 12h16M4 17h16"/></>,
+    eye: <><path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z"/><circle cx="12" cy="12" r="2.5"/></>,
+    eyeOff: <><path d="m3 3 18 18M10 7.2A11 11 0 0 1 12 7c6 0 9.5 5 9.5 5a14 14 0 0 1-3.2 3.1M6.3 8.3C3.8 9.9 2.5 12 2.5 12s3.5 5 9.5 5c1.4 0 2.7-.3 3.8-.7"/></>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
@@ -45,6 +46,9 @@ function App() {
   const [newPhone, setNewPhone] = useState('')
   const [draft, setDraft] = useState('')
   const [messages, setMessages] = useState([])
+  const [creatingChat, setCreatingChat] = useState(false)
+  const [showToken, setShowToken] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const bottom = useRef(null)
@@ -94,7 +98,7 @@ function App() {
     event.preventDefault(); setBusy(true); setError('')
     try {
       const data = await api('/chat', { method: 'POST', body: JSON.stringify({ phone: newPhone }) })
-      setChatId(data.chatId); setPhone(data.phone); setMessages(data.messages); setNewPhone('')
+      setChatId(data.chatId); setPhone(data.phone); setMessages(data.messages); setNewPhone(''); setCreatingChat(false); setSidebarOpen(false)
     } catch (err) { setError(err.message) } finally { setBusy(false) }
   }
 
@@ -112,25 +116,79 @@ function App() {
   async function disconnect() {
     await api('/disconnect', { method: 'POST' }).catch(() => {})
     sessionStorage.removeItem(tokenKey)
-    setConnected(false); setChatId(null); setPhone(''); setMessages([]); setError('')
+    setConnected(false); setChatId(null); setPhone(''); setMessages([]); setError(''); setCreatingChat(false); setSidebarOpen(false)
   }
 
   if (!ready) return <div className="loading">Загрузка…</div>
 
+  const lastMessage = messages.at(-1)
+  const lastPreview = lastMessage ? (lastMessage.direction === 'outgoing' ? 'Вы: ' : '') + lastMessage.text : 'Сообщений пока нет'
+  const lastTime = lastMessage ? new Date(lastMessage.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : null
+  const startNewChat = () => { setCreatingChat(true); setError(''); setSidebarOpen(false) }
+
   return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><span className="brand-mark"><Icon name="send" size={22}/></span><span><strong>Telegram Chat</strong><small>powered by GREEN-API</small></span></div>
-      <div className="sidebar-section"><span className="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</span><div className="sidebar-title">Сообщения <span className="count">{chatId ? '1' : '0'}</span></div></div>
-      {connected && <button className="new-chat" onClick={() => { setChatId(null); setMessages([]); setError('') }}>＋ &nbsp; Новый чат</button>}
-      {chatId && <div className="chat-list-item"><div className="avatar">{phone.slice(-2)}</div><div><strong>{phone}</strong><small>Личный чат</small></div><span className="list-arrow">›</span></div>}
-      {!chatId && <div className="empty-list"><Icon name="chat" size={25}/><p>Здесь появится<br/>ваш чат</p></div>}
-      <div className="sidebar-bottom"><span className="status-dot"/> {connected ? 'Инстанс подключён' : 'Нет подключения'}{connected && <button onClick={disconnect}>Отключить</button>}</div>
+    {sidebarOpen && <button className="sidebar-backdrop" aria-label="Закрыть список чатов" onClick={() => setSidebarOpen(false)}/>}
+    <aside className={'sidebar' + (sidebarOpen ? ' open' : '')}>
+      <div className="sidebar-header">
+        <strong>Чаты</strong>
+        {connected && <button className="new-chat" onClick={startNewChat} aria-label="Новый чат" title="Новый чат"><Icon name="plus" size={20}/><span>Новый чат</span></button>}
+      </div>
+      <div className="chat-list">
+        {chatId ? <button className={'chat-list-item' + (!creatingChat ? ' selected' : '')} onClick={() => { setCreatingChat(false); setError(''); setSidebarOpen(false) }}>
+          <span className="avatar"><Icon name="user" size={22}/></span>
+          <span className="chat-list-copy"><strong>{phone}</strong><small>{lastPreview}</small></span>
+          {lastTime && <time>{lastTime}</time>}
+        </button> : <p className="empty-list">{connected ? 'Пока нет чатов. Нажмите «Новый чат», чтобы указать получателя.' : 'Подключите аккаунт, чтобы начать переписку.'}</p>}
+      </div>
+      <div className="sidebar-bottom"><span className={'status-dot' + (connected ? ' online' : '')}/><span>{connected ? 'Аккаунт подключён' : 'Аккаунт не подключён'}</span>{connected && <button onClick={disconnect}>Отключить</button>}</div>
     </aside>
     <main className="main">
-      <header className="topbar"><div className="topbar-label">{chatId ? <><div className="avatar small">{phone.slice(-2)}</div><span><strong>{phone}</strong><small>Telegram</small></span></> : <><div className="topbar-icon"><Icon name="chat"/></div><span><strong>Сообщения</strong><small>Простой чат для общения</small></span></>}</div><div className="topbar-badge"><span className="status-dot"/> {connected ? 'Подключено' : 'GREEN-API'}</div></header>
-      {!connected ? <section className="center-content"><div className="hero-icon"><Icon name="send" size={32}/></div><div className="eyebrow blue">НАЧНИТЕ ОБЩЕНИЕ</div><h1>Ваш Telegram.<br/><span>В одном окне.</span></h1><p className="intro">Подключите инстанс GREEN-API, чтобы отправлять и получать текстовые сообщения прямо здесь.</p><form className="card" onSubmit={connect}><div className="card-header"><Icon name="bolt" size={19}/><strong>Подключение инстанса</strong></div><label>Адрес API<input required type="url" value={credentials.apiUrl} onChange={e => setCredentials({ ...credentials, apiUrl: e.target.value })} placeholder="https://api.green-api.com"/></label><div className="field-row"><label>ID инстанса<input required inputMode="numeric" value={credentials.idInstance} onChange={e => setCredentials({ ...credentials, idInstance: e.target.value })} placeholder="4100000000"/></label><label>API-токен<input required type="password" value={credentials.apiTokenInstance} onChange={e => setCredentials({ ...credentials, apiTokenInstance: e.target.value })} placeholder="Введите токен"/></label></div>{error && <div className="error" role="alert">{error}</div>}<button className="primary" disabled={busy}>{busy ? 'Подключаем…' : 'Подключиться'} <span>→</span></button><div className="privacy"><Icon name="lock" size={14}/> Данные доступны только в текущей сессии</div></form></section>
-      : !chatId ? <section className="center-content"><div className="hero-icon"><Icon name="chat" size={32}/></div><div className="eyebrow blue">НОВЫЙ ДИАЛОГ</div><h1>Начните<br/><span>разговор.</span></h1><p className="intro">Введите номер телефона получателя в международном формате. Мы найдём его аккаунт в Telegram.</p><form className="card phone-card" onSubmit={openChat}><div className="card-header"><Icon name="chat" size={19}/><strong>Новый чат</strong></div><label>Номер телефона<input required type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+7 999 123-45-67" autoFocus/></label>{error && <div className="error" role="alert">{error}</div>}<button className="primary" disabled={busy}>{busy ? 'Ищем аккаунт…' : 'Открыть чат'} <span>→</span></button></form></section>
-      : <section className="conversation"><div className="messages"><div className="date-chip">Сегодня</div>{messages.length === 0 && <div className="conversation-empty">Чат открыт. Напишите первое сообщение.</div>}{messages.map(message => <div key={`${message.chatId}:${message.id}`} className={`message ${message.direction}`}><div>{message.text}</div><small>{new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}{message.direction === 'outgoing' && <Icon name="check" size={14}/>}</small></div>)}<div ref={bottom}/></div><div className="composer-area">{error && <div className="error" role="alert">{error}</div>}<form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Напишите сообщение…" maxLength={4096} aria-label="Сообщение"/><button disabled={busy || !draft.trim()} aria-label="Отправить"><Icon name="send" size={19}/></button></form><div className="composer-note">Только текстовые сообщения · Telegram через GREEN-API</div></div></section>}
+      <header className="topbar">
+        <button className="mobile-menu" type="button" aria-label="Открыть список чатов" onClick={() => setSidebarOpen(true)}><Icon name="menu" size={22}/></button>
+        {connected && chatId && !creatingChat ? <div className="topbar-label"><span className="avatar small"><Icon name="user" size={19}/></span><strong>{phone}</strong></div> : <strong>{!connected ? 'Подключение аккаунта' : 'Новый чат'}</strong>}
+      </header>
+      {!connected ? <section className="setup-view">
+        <div className="setup-panel">
+          <h1>Подключите аккаунт</h1>
+          <p className="view-intro">Введите данные Telegram-инстанса из кабинета GREEN-API.</p>
+          <form onSubmit={connect}>
+            <label>ID инстанса<input required inputMode="numeric" autoComplete="off" value={credentials.idInstance} onChange={e => setCredentials({ ...credentials, idInstance: e.target.value })} placeholder="Например, 4100000000"/></label>
+            <label>API-токен
+              <span className="token-field"><input required type={showToken ? 'text' : 'password'} autoComplete="off" value={credentials.apiTokenInstance} onChange={e => setCredentials({ ...credentials, apiTokenInstance: e.target.value })} placeholder="Введите токен"/><button type="button" aria-label={showToken ? 'Скрыть токен' : 'Показать токен'} onClick={() => setShowToken(value => !value)}><Icon name={showToken ? 'eyeOff' : 'eye'} size={19}/></button></span>
+            </label>
+            <details className="advanced-settings"><summary>Дополнительные настройки</summary><label>Адрес API<input required type="url" value={credentials.apiUrl} onChange={e => setCredentials({ ...credentials, apiUrl: e.target.value })} placeholder="https://api.green-api.com"/></label><p>Если в кабинете указан другой адрес API, замените его здесь.</p></details>
+            {error && <div className="error" role="alert">{error}</div>}
+            <button className="primary" disabled={busy}>{busy ? 'Подключаем…' : 'Подключиться'}</button>
+          </form>
+          <p className="privacy">ID и токен не записываются на диск. После отключения или через 8 часов их потребуется ввести заново.</p>
+        </div>
+      </section> : (!chatId || creatingChat) ? <section className="setup-view">
+        <div className="setup-panel phone-panel">
+          <h1>Новый чат</h1>
+          <form onSubmit={openChat}>
+            <label>Номер телефона<input required type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+7 999 123-45-67" autoFocus/></label>
+            <p className="field-hint">Укажите номер получателя в международном формате.</p>
+            {error && <div className="error" role="alert">{error}</div>}
+            <button className="primary" disabled={busy}>{busy ? 'Ищем аккаунт…' : 'Открыть чат'}</button>
+          </form>
+        </div>
+      </section> : <section className="conversation">
+        <div className="messages" aria-live="polite">
+          {messages.length === 0 && <div className="conversation-empty">Напишите первое сообщение</div>}
+          {messages.map(message => <div key={message.chatId + ':' + message.id} className={'message ' + message.direction}>
+            <div>{message.text}</div>
+            <small><time>{new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>{message.direction === 'outgoing' && <span title="Сообщение принято GREEN-API, доставка адресату не подтверждена">Принято API</span>}</small>
+          </div>)}
+          <div ref={bottom}/>
+        </div>
+        <div className="composer-area">
+          {error && <div className="error" role="alert">{error}</div>}
+          <form className="composer" onSubmit={send}>
+            <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Сообщение" maxLength={4096} aria-label="Сообщение"/>
+            <button disabled={busy || !draft.trim()} aria-label="Отправить сообщение"><Icon name="send" size={21}/></button>
+          </form>
+        </div>
+      </section>}
     </main>
   </div>
 }
