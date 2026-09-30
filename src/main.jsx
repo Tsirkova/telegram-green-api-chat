@@ -12,7 +12,7 @@ async function api(path, options) {
     const token = sessionStorage.getItem(tokenKey)
     response = await fetch(`${apiBase}/api${path}`, { ...options, headers: { ...(options?.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, cache: 'no-store' })
   } catch {
-    throw new Error('Нет связи с API-сервером. Проверьте подключение и повторите попытку.')
+    throw new Error('Не удалось обратиться к API-серверу. Откройте основной адрес сайта telegram-green-api-chat-six.vercel.app и повторите попытку. Если ошибка останется, проверьте доступность API-сервера.')
   }
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {

@@ -15,7 +15,7 @@ export function normalizeApiUrl(value) {
 }
 
 export function validateCredentials(input) {
-  if (!input || !/^\d{10}$/.test(String(input.idInstance ?? '')) || !/^[A-Za-z0-9_-]{10,}$/.test(String(input.apiTokenInstance ?? ''))) {
+  if (!input || !/^\d{10,20}$/.test(String(input.idInstance ?? '')) || !/^[A-Za-z0-9_-]{10,}$/.test(String(input.apiTokenInstance ?? ''))) {
     throw new ApiError('Проверьте ID инстанса и API-токен.', 400)
   }
   return {

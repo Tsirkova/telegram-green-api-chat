@@ -6,6 +6,7 @@ const credentials = { apiUrl: 'https://4100.api.green-api.com', idInstance: '410
 
 test('validates credentials and blocks unrelated API hosts', () => {
   assert.equal(validateCredentials(credentials).apiUrl, credentials.apiUrl)
+  assert.equal(validateCredentials({ ...credentials, idInstance: '410000000000' }).idInstance, '410000000000')
   assert.throws(() => validateCredentials({ ...credentials, apiUrl: 'https://evil.example' }), ApiError)
   assert.throws(() => validateCredentials({ ...credentials, apiTokenInstance: '' }), ApiError)
 })
